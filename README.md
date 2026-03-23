@@ -2,6 +2,8 @@
 
 A CLI tool that crawls a file system and sends file/directory metadata to the metadata-engine API.
 
+Each crawled directory appears as a separate volume in the web UI. The crawler stores paths relative to the scanned directory, so no host filesystem structure is exposed.
+
 ---
 
 ## Installation
@@ -108,9 +110,28 @@ A CLI tool that crawls a file system and sends file/directory metadata to the me
 |------|---------|----------|---------|-------------|
 | `--root` | | Yes | | Root path to crawl |
 | `--api` | `API_URL` | Yes | | API base URL |
+| `--name` | | No | Root directory name | Volume name displayed in the web UI |
 | `--workers` | | No | 8 | Number of concurrent workers |
 
 The `--api` flag takes precedence over the `API_URL` environment variable. If neither is provided, the crawler will exit with an error.
+
+### Volume naming
+
+By default, the volume name is the name of the directory being scanned. For example, scanning `/mnt/data` creates a volume called `data`.
+
+Use `--name` to override this. This is useful when the directory name isn't meaningful (e.g. a Windows drive letter for a mounted network share):
+
+**macOS / Linux:**
+```bash
+./crawler --root /mnt/share --name my-volume --api https://your-api-url.com
+```
+
+**Windows:**
+```cmd
+crawler.exe --root Z:\ --name my-volume --api https://your-api-url.com
+```
+
+The volume will appear in the web UI at `https://your-web-url.com/my-volume`.
 
 ### Using environment variables instead of flags
 
@@ -144,5 +165,5 @@ docker build -t metadata-engine-crawler .
 docker run --rm \
   -e API_URL=https://your-api-url.com \
   -v /path/to/scan:/data:ro \
-  metadata-engine-crawler --root /data
+  metadata-engine-crawler --root /data --name my-volume
 ```

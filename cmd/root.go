@@ -37,5 +37,6 @@ func Execute() {
 func init() {
 	rootCmd.Flags().StringVar(&cfg.Root, "root", "", "Root path to crawl (required)")
 	rootCmd.Flags().StringVar(&cfg.ApiURL, "api", "", "API base URL (or set API_URL env var)")
+	rootCmd.Flags().StringVar(&cfg.VolumeName, "name", "", "Volume name (defaults to root directory name)")
 	rootCmd.Flags().IntVar(&cfg.Workers, "workers", 8, "Number of worker goroutines")
 }

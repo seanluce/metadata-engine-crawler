@@ -18,7 +18,13 @@ import (
 func Run(cfg config.Config) error {
 	client := api.New(cfg.ApiURL)
 
-	fmt.Printf("Starting crawl of %q with %d workers\n", cfg.Root, cfg.Workers)
+	// Default volume name to the root directory name
+	volumeName := cfg.VolumeName
+	if volumeName == "" {
+		volumeName = filepath.Base(filepath.Clean(cfg.Root))
+	}
+
+	fmt.Printf("Starting crawl of %q as volume %q with %d workers\n", cfg.Root, volumeName, cfg.Workers)
 	start := time.Now()
 
 	entries := Walk(cfg.Root)
@@ -38,7 +44,7 @@ func Run(cfg config.Config) error {
 					continue
 				}
 
-				rec, err := buildRecord(cfg.Root, entry)
+				rec, err := buildRecord(cfg.Root, volumeName, entry)
 				if err != nil {
 					fmt.Printf("WARN: stat error at %s: %v\n", entry.Path, err)
 					errCount.Add(1)
@@ -66,23 +72,49 @@ func Run(cfg config.Config) error {
 	return nil
 }
 
-func buildRecord(root string, entry WalkEntry) (models.FileRecord, error) {
+func buildRecord(root string, volumeName string, entry WalkEntry) (models.FileRecord, error) {
 	info, err := entry.Entry.Info()
 	if err != nil {
 		return models.FileRecord{}, err
 	}
 
-	path := filepath.ToSlash(entry.Path)
+	// Normalize everything to forward slashes first, then strip the
+	// crawl root so stored paths are relative and consistent across platforms.
+	cleanRoot := filepath.ToSlash(filepath.Clean(root))
+	fullPath := filepath.ToSlash(entry.Path)
+
+	// Build the relative path under the volume name.
+	// e.g. root=C:\Users\sean\Downloads, volumeName=Downloads
+	//   C:/Users/sean/Downloads       → /Downloads
+	//   C:/Users/sean/Downloads/a.txt → /Downloads/a.txt
+	relPath := strings.TrimPrefix(fullPath, cleanRoot)
+	var path string
+	if relPath == "" {
+		// This is the root entry itself
+		path = "/" + volumeName
+	} else {
+		path = "/" + volumeName + relPath
+	}
+
 	name := info.Name()
+	if relPath == "" {
+		// Root entry uses the volume name
+		name = volumeName
+	}
 	isDir := entry.Entry.IsDir()
 
-	parentPath := filepath.ToSlash(filepath.Dir(entry.Path))
-	if parentPath == "." {
+	// Parent path: strip the root and prepend the volume name
+	parentFull := filepath.ToSlash(filepath.Dir(entry.Path))
+	parentRel := strings.TrimPrefix(parentFull, cleanRoot)
+	var parentPath string
+	if fullPath == cleanRoot {
+		// Root entry has no parent
 		parentPath = ""
-	}
-	// Root entry: set parent_path to empty string
-	if filepath.Clean(entry.Path) == filepath.Clean(root) {
-		parentPath = ""
+	} else if parentRel == "" {
+		// Direct child of root
+		parentPath = "/" + volumeName
+	} else {
+		parentPath = "/" + volumeName + parentRel
 	}
 
 	ext := ""
