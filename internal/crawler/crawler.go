@@ -18,20 +18,28 @@ import (
 func Run(cfg config.Config) error {
 	client := api.New(cfg.ApiURL)
 
+	// Normalize root path: on Windows, "Z:" means current dir on Z drive,
+	// but users typically mean the root of the drive. Append a separator
+	// so filepath.WalkDir traverses from the drive root.
+	root := cfg.Root
+	if len(root) == 2 && root[1] == ':' {
+		root = root + string(filepath.Separator)
+	}
+
 	// Default volume name to the root directory name
 	volumeName := cfg.VolumeName
 	if volumeName == "" {
-		volumeName = filepath.Base(filepath.Clean(cfg.Root))
+		volumeName = filepath.Base(filepath.Clean(root))
 	}
 
 	if cfg.Version != "" {
-		fmt.Printf("Starting crawl of %q as volume %q (version %q) with %d workers\n", cfg.Root, volumeName, cfg.Version, cfg.Workers)
+		fmt.Printf("Starting crawl of %q as volume %q (version %q) with %d workers\n", root, volumeName, cfg.Version, cfg.Workers)
 	} else {
-		fmt.Printf("Starting crawl of %q as volume %q with %d workers\n", cfg.Root, volumeName, cfg.Workers)
+		fmt.Printf("Starting crawl of %q as volume %q with %d workers\n", root, volumeName, cfg.Workers)
 	}
 	start := time.Now()
 
-	entries := Walk(cfg.Root)
+	entries := Walk(root)
 
 	var wg sync.WaitGroup
 	var count atomic.Int64
@@ -48,7 +56,7 @@ func Run(cfg config.Config) error {
 					continue
 				}
 
-				rec, err := buildRecord(cfg.Root, volumeName, cfg.Version, entry)
+				rec, err := buildRecord(root, volumeName, cfg.Version, entry)
 				if err != nil {
 					fmt.Printf("WARN: stat error at %s: %v\n", entry.Path, err)
 					errCount.Add(1)
@@ -85,7 +93,11 @@ func buildRecord(root string, volumeName string, crawlLabel string, entry WalkEn
 	// Normalize everything to forward slashes first, then strip the
 	// crawl root so stored paths are relative and consistent across platforms.
 	cleanRoot := filepath.ToSlash(filepath.Clean(root))
+	// Ensure the root ends without a trailing slash for consistent stripping,
+	// but handle Windows drive roots like "Z:" → "Z:" (no slash to trim).
+	cleanRoot = strings.TrimRight(cleanRoot, "/")
 	fullPath := filepath.ToSlash(entry.Path)
+	fullPath = strings.TrimRight(fullPath, "/")
 
 	// Build the relative path under the volume name.
 	// e.g. root=C:\Users\sean\Downloads, volumeName=Downloads
@@ -109,6 +121,7 @@ func buildRecord(root string, volumeName string, crawlLabel string, entry WalkEn
 
 	// Parent path: strip the root and prepend the volume name
 	parentFull := filepath.ToSlash(filepath.Dir(entry.Path))
+	parentFull = strings.TrimRight(parentFull, "/")
 	parentRel := strings.TrimPrefix(parentFull, cleanRoot)
 	var parentPath string
 	if fullPath == cleanRoot {
