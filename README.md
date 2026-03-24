@@ -111,6 +111,7 @@ Each crawled directory appears as a separate volume in the web UI. The crawler s
 | `--root` | | Yes | | Root path to crawl |
 | `--api` | `API_URL` | Yes | | API base URL |
 | `--name` | | No | Root directory name | Volume name displayed in the web UI |
+| `--version` | | No | | Version label for this crawl run (e.g. `snap001`) |
 | `--workers` | | No | 8 | Number of concurrent workers |
 
 The `--api` flag takes precedence over the `API_URL` environment variable. If neither is provided, the crawler will exit with an error.
@@ -132,6 +133,16 @@ crawler.exe --root Z:\ --name my-volume --api https://your-api-url.com
 ```
 
 The volume will appear in the web UI at `https://your-web-url.com/my-volume`.
+
+### Version labeling
+
+Use `--version` to label a crawl run. Each volume maintains its own version history, and the label appears in the version selector dropdown in the web UI.
+
+```bash
+./crawler --root /mnt/share --name my-volume --version "snap001" --api https://your-api-url.com
+```
+
+Running multiple crawls with different version labels lets you compare the state of a volume at different points in time.
 
 ### Using environment variables instead of flags
 
