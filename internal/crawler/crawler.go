@@ -24,7 +24,11 @@ func Run(cfg config.Config) error {
 		volumeName = filepath.Base(filepath.Clean(cfg.Root))
 	}
 
-	fmt.Printf("Starting crawl of %q as volume %q with %d workers\n", cfg.Root, volumeName, cfg.Workers)
+	if cfg.Version != "" {
+		fmt.Printf("Starting crawl of %q as volume %q (version %q) with %d workers\n", cfg.Root, volumeName, cfg.Version, cfg.Workers)
+	} else {
+		fmt.Printf("Starting crawl of %q as volume %q with %d workers\n", cfg.Root, volumeName, cfg.Workers)
+	}
 	start := time.Now()
 
 	entries := Walk(cfg.Root)
@@ -44,7 +48,7 @@ func Run(cfg config.Config) error {
 					continue
 				}
 
-				rec, err := buildRecord(cfg.Root, volumeName, entry)
+				rec, err := buildRecord(cfg.Root, volumeName, cfg.Version, entry)
 				if err != nil {
 					fmt.Printf("WARN: stat error at %s: %v\n", entry.Path, err)
 					errCount.Add(1)
@@ -72,7 +76,7 @@ func Run(cfg config.Config) error {
 	return nil
 }
 
-func buildRecord(root string, volumeName string, entry WalkEntry) (models.FileRecord, error) {
+func buildRecord(root string, volumeName string, crawlLabel string, entry WalkEntry) (models.FileRecord, error) {
 	info, err := entry.Entry.Info()
 	if err != nil {
 		return models.FileRecord{}, err
@@ -136,6 +140,7 @@ func buildRecord(root string, volumeName string, entry WalkEntry) (models.FileRe
 		ModifiedAt: timestamps.Modified,
 		AccessedAt: timestamps.Accessed,
 		CrawledAt:  time.Now().UTC(),
+		CrawlLabel: crawlLabel,
 		Mode:       info.Mode().String(),
 	}, nil
 }

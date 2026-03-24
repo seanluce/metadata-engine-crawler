@@ -37,6 +37,7 @@ type ingestPayload struct {
 	ModifiedAt string `json:"modified_at"`
 	AccessedAt string `json:"accessed_at"`
 	CrawledAt  string `json:"crawled_at"`
+	CrawlLabel string `json:"crawl_label,omitempty"`
 	Mode       string `json:"mode"`
 }
 
@@ -53,6 +54,7 @@ func (c *Client) Insert(ctx context.Context, rec models.FileRecord) error {
 		ModifiedAt: rec.ModifiedAt.Format(time.RFC3339Nano),
 		AccessedAt: rec.AccessedAt.Format(time.RFC3339Nano),
 		CrawledAt:  rec.CrawledAt.Format(time.RFC3339Nano),
+		CrawlLabel: rec.CrawlLabel,
 		Mode:       rec.Mode,
 	}
 

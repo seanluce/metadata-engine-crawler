@@ -5,4 +5,5 @@ type Config struct {
 	ApiURL     string
 	Workers    int
 	VolumeName string
+	Version    string
 }

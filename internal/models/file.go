@@ -16,6 +16,7 @@ type FileRecord struct {
 	ModifiedAt     time.Time         `bson:"modified_at"`
 	AccessedAt     time.Time         `bson:"accessed_at"`
 	CrawledAt      time.Time         `bson:"crawled_at"`
+	CrawlLabel     string            `bson:"crawl_label"`
 	Mode           string            `bson:"mode"`
 	CustomMetadata map[string]string `bson:"custom_metadata"`
 }
